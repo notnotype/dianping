@@ -6,6 +6,7 @@ import logging
 from typing import List
 
 from peewee import *
+from fake_useragent import UserAgent
 
 from spider import ResourceRoot
 from spider import Spider
@@ -14,6 +15,32 @@ spider = Spider()
 logger = logging.getLogger('spider')
 res = ResourceRoot('resources')
 db = SqliteDatabase('db.sqlite')
+
+
+def header_generator():
+    header = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'zh-CN,zh;q=0.9,zh-TW;q=0.8,en-US;q=0.7,en;q=0.6',
+        'Cache-Control': 'max-age=0',
+        'Host': 'www.dianping.com',
+        'Referer': 'http://www.dianping.com/beijing/',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': str(UserAgent().random),
+    }
+    return header
+
+
+def response_pipeline(s: Spider, response: Spider.Response):
+    if response.title == '验证中心':
+        input('去验证: {}'.format(response.url))
+    return response
+
+
+# 设置爬虫
+spider.headers_generator = header_generator
+# 让它去打开浏览器验证
+spider.response_pipeline = response_pipeline
 
 
 class Shop(Model):
@@ -139,6 +166,12 @@ def main():
         '''
         # 解析保存数据
         parse_info(search_url)
+
+
+def test_request():
+    r = spider.get('http://www.dianping.com/shop/l9ZszA41xUchPAwb', cache=Spider.DISABLE_CACHE)
+    logger.info(r.__repr__())
+    print(r.text)
 
 
 if __name__ == '__main__':
