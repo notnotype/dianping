@@ -4,6 +4,7 @@ general_template
 
 import logging
 from typing import List
+from urllib.parse import quote
 
 from peewee import *
 from fake_useragent import UserAgent
@@ -88,9 +89,9 @@ def parse_comment(resp: spider.Response) -> List[Comment]:
 
 
 def parse_info(url: str):
-    """直接解析 https://github.com/notnotype/dianping/invitations 包括评论
+    """直接解析 http://www.dianping.com/shop/l9ZszA41xUchPAwb 包括评论
 
-    :param url: like https://github.com/notnotype/dianping/invitations
+    :param url: like http://www.dianping.com/shop/l9ZszA41xUchPAwb
     :return: None
     """
     # 包装post表
@@ -120,6 +121,10 @@ def parse_info(url: str):
     shop.save()
 
 
+def test_parse_info():
+    parse_info('http://www.dianping.com/shop/l9ZszA41xUchPAwb')
+
+
 def search(keyword: str, position: str):
     """生成器返回搜索页面的url每一页
 
@@ -127,7 +132,7 @@ def search(keyword: str, position: str):
     :param position:
     :return:
     """
-    yield ''
+    yield 'https://www.dianping.com/search/keyword/193/0_%E6%96%B0%E7%96%86'
     ...
 
 
