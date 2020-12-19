@@ -44,6 +44,9 @@ class Comment(Model):
     # 来自哪个店铺
     shop = ForeignKeyField(Shop, backref='comment')
 
+    class Meta:
+        database = db
+
 
 def get_comment(resp: spider.Response):
     # 包装 comment
@@ -68,11 +71,24 @@ def get_info(url: str):
 
 def search(keyword, position):
     """生成器返回搜索页面的url"""
+    yield ''
     ...
 
 
 def main():
-    ...
+    # 初始化数据库
+    if not db.is_connection_usable():
+        db.connect()
+    if not db.table_exists(Shop):
+        db.create_tables([Shop])
+    if not db.table_exists(Comment):
+        db.create_tables([Comment])
+
+    keyword = input('input keyword: ')
+    position = input('input position: ')
+
+    for search_url in search(keyword, position):
+        get_info(search_url)
 
 
 if __name__ == '__main__':
