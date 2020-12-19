@@ -19,6 +19,7 @@ db = SqliteDatabase('db.sqlite')
 class Shop(Model):
     url = CharField()
     name = CharField()
+    items_info = []
     comment_count = IntegerField()
     common_price = FloatField()
     taste = FloatField()
@@ -68,14 +69,21 @@ def parse_info(url: str):
     # 包装post表
     # 请求url
     resp = spider.get(url)
-    title = resp.css('title')
-    title = resp.xpath('//title/test()')
-    title = title[0].text
+    basic_info = resp.css("#basic-info")[0]
+    shop_name = basic_info.xpath("./h1/text()")[0]
+    star_num = basic_info.xpath('./div[@class="mid-score"]/text()')[0]
+    # item_info 里面有一堆小把戏
+    items_info = basic_info.xpath('./span[@class="item"]/text()')
+    position = basic_info.xpath('./div[@class="address"]/span[@id="address"]/text()')[0]
+    tel = basic_info.xpath('./p[@class="tel"]/text()')[0]
 
     # 包装 Shop
     shop = Shop()
     shop.url = url
-    shop.tel = '45465-654564'
+    shop.name = shop_name
+    shop.items_info = items_info
+    shop.position = position
+    shop.tel = tel
     # 包装评论
     comments = parse_comment(resp)
     for comment in comments:
