@@ -3,11 +3,13 @@ general_template
 """
 
 import logging
+from itertools import count
 from typing import List
 from urllib.parse import quote
 
 from peewee import *
 from fake_useragent import UserAgent
+from lxml.html import HtmlElement
 
 from spider import ResourceRoot
 from spider import Spider
@@ -35,7 +37,7 @@ def header_generator():
 def response_pipeline(s: Spider, response: Spider.Response):
     while response.title == '验证中心':
         input('去验证: {}'.format(response.url))
-        response = spider.get(response.url)
+        response = spider.get(response.url, cache=Spider.DISABLE_CACHE)
     return response
 
 
@@ -133,10 +135,17 @@ def search(keyword: str, position: str):
 
     :param keyword:
     :param position:
-    :return:
+    :return: response
     """
-    yield 'https://www.dianping.com/search/keyword/193/0_%E6%96%B0%E7%96%86'
-    ...
+
+    search_url = 'http://www.dianping.com/search/keyword/193/0_{}/p{}'
+    for i in count(1):
+        current_url = search_url.format(quote(keyword), str(i))
+        response = spider.get(current_url)
+        if '检查关键词填写是否有误' in response.text:
+            return None
+        else:
+            yield response
 
 
 def shop_page_generator(keyword: str, position: str) -> list:
@@ -148,7 +157,11 @@ def shop_page_generator(keyword: str, position: str) -> list:
     """
     for search_page in search(keyword, position):
         # 解析获得 'http://www.dianping.com/shop/l9ZszA41xUchPAwb'等url
-        yield 'http://www.dianping.com/shop/l9ZszA41xUchPAwb'
+        ul = search_page.xpath("//div[@id='shop-all-list']//ul")
+        for li in ul:
+            a: HtmlElement = li.xpath(".//a")[0]
+            logger.debug('attrib:{}', a.attrib)
+            yield a.attrib['href']
 
 
 def main():
@@ -164,7 +177,7 @@ def main():
     position = input('input position: ')
 
     for search_url in shop_page_generator(keyword, position):
-        '''search_url = *
+        '''search_url == *
         [
         'http://www.dianping.com/shop/l9ZszA41xUchPAwb',
         'http://www.dianping.com/shop/l9ZszA41xUchPAwb',
@@ -172,6 +185,7 @@ def main():
         'http://www.dianping.com/shop/l9ZszA41xUchPAwb',
         ]
         '''
+        logger.info('正在解析: {}', search_url)
         # 解析保存数据
         parse_info(search_url)
 
