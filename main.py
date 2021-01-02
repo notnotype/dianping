@@ -33,8 +33,9 @@ def header_generator():
 
 
 def response_pipeline(s: Spider, response: Spider.Response):
-    if response.title == '验证中心':
+    while response.title == '验证中心':
         input('去验证: {}'.format(response.url))
+        response = spider.get(response.url)
     return response
 
 
@@ -42,6 +43,7 @@ def response_pipeline(s: Spider, response: Spider.Response):
 spider.headers_generator = header_generator
 # 让它去打开浏览器验证
 spider.response_pipeline = response_pipeline
+# 取消每次请求间隔时间
 spider.set_sleeper(lambda: None)
 
 
