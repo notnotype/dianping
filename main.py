@@ -18,7 +18,7 @@ spider = Spider()
 logger = logging.getLogger('spider')
 res = ResourceRoot('resources')
 db = SqliteDatabase('db.sqlite')
-
+test_git = 1
 
 def header_generator():
     header = {
