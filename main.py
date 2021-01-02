@@ -37,7 +37,7 @@ def header_generator():
 def response_pipeline(s: Spider, response: Spider.Response):
     while response.title == '验证中心':
         input('去验证: {}'.format(response.url))
-        response = spider.get(response.url, cache=Spider.DISABLE_CACHE)
+        response = spider.get(response.history[0], cache=Spider.DISABLE_CACHE)
     return response
 
 
@@ -46,7 +46,7 @@ spider.headers_generator = header_generator
 # 让它去打开浏览器验证
 spider.response_pipeline = response_pipeline
 # 取消每次请求间隔时间
-spider.set_sleeper(lambda: None)
+# spider.set_sleeper(lambda: None)
 
 
 class Shop(Model):
@@ -54,7 +54,7 @@ class Shop(Model):
     name = CharField(unique=True)
     items_info = []
     comment_count = IntegerField()
-    common_price = FloatField()
+    avg_price = FloatField()
     taste = FloatField()
     environment = FloatField()
     service = FloatField()
@@ -101,15 +101,17 @@ def parse_info(url: str):
     """
     # 包装post表
     # 请求url
-    resp = spider.get(url, cache=Spider.DISABLE_CACHE)
+
+    # resp = spider.get(url, cache=Spider.DISABLE_CACHE)  关闭缓存
+    resp = spider.get(url)
     shop_name = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/h1/text()|/html/body/div[2]/div/div[2]/div[1]/h1/e/text()')
 
-    biref_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
-    starnum = biref_info.xpath('./span[1]/@class')
-    reviewCount = biref_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()')
-    avgprice = biref_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()')
+    brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
+    star_num = brief_info.xpath('./span[1]/@class')
+    comment_count = brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()')
+    avg_price = brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()')
 
-    comment_score = biref_info.xpath('./span[@id="comment_score"]')[0]
+    comment_score = brief_info.xpath('./span[@id="comment_score"]')[0]
     taste = comment_score.xpath('./span[1]/text()|./span[1]/d/text()')
     environment = comment_score.xpath('./span[2]/text()|./span[2]/d/text()')
     service = comment_score.xpath('./span[3]/text()|./span[3]/d/text()')
@@ -119,22 +121,30 @@ def parse_info(url: str):
 
     tel = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/p')[0].xpath('./text()|./*/text()')
 
-    print(shop_name, starnum, reviewCount, avgprice, taste, environment, service, position, tel)
+    print(shop_name, star_num, comment_count, avg_price, taste, environment, service, position, tel)
 
-    # 包装 Shop
-    shop = Shop()
-    shop.url = url
-    shop.name = shop_name
-    shop.items_info = items_info
-    shop.position = position
-    shop.tel = tel
-    # 包装评论
-    comments = parse_comment(resp)
-    for comment in comments:
-        comment.save()
-
-    # 在包装后
-    shop.save()
+    '''暂时不包装到数据库'''
+    # # 包装 Shop
+    # shop = Shop()
+    # shop.url = url
+    # shop.name = shop_name
+    # shop.items_info = brief_info
+    # shop.position = position
+    # shop.tel = tel
+    # shop.comment_count = comment_count
+    # shop.avg_price = avg_price
+    # shop.taste = taste
+    # shop.environment = environment
+    # shop.service = service
+    # shop.position = position
+    # shop.data = 'data'
+    # # 包装评论
+    # comments = parse_comment(resp)
+    # for comment in comments:
+    #     comment.save()
+    #
+    # # 在包装后
+    # shop.save()
 
 
 def test_parse_info():
@@ -169,9 +179,9 @@ def shop_page_generator(keyword: str, position: str) -> list:
     for search_page in search(keyword, position):
         # 解析获得 'http://www.dianping.com/shop/l9ZszA41xUchPAwb'等url
         ul = search_page.xpath("//div[@id='shop-all-list']//ul")
-        for li in ul:
+        for li in ul[0]:
             a: HtmlElement = li.xpath(".//a")[0]
-            logger.debug('attrib:{}', a.attrib)
+            # logger.debug('attrib:{}', a.attrib)
             yield a.attrib['href']
 
 
