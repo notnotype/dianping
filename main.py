@@ -42,6 +42,7 @@ def response_pipeline(s: Spider, response: Spider.Response):
 spider.headers_generator = header_generator
 # 让它去打开浏览器验证
 spider.response_pipeline = response_pipeline
+spider.set_sleeper(lambda: None)
 
 
 class Shop(Model):
@@ -96,7 +97,7 @@ def parse_info(url: str):
     """
     # 包装post表
     # 请求url
-    resp = spider.get(url)
+    resp = spider.get(url, cache=Spider.DISABLE_CACHE)
     basic_info = resp.css("#basic-info")[0]
     shop_name = basic_info.xpath("./h1/text()")[0]
     star_num = basic_info.xpath('./div[@class="mid-score"]/text()')[0]
