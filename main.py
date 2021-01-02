@@ -18,7 +18,7 @@ spider = Spider()
 logger = logging.getLogger('spider')
 res = ResourceRoot('resources')
 db = SqliteDatabase('db.sqlite')
-
+test_git = 0
 
 def header_generator():
     header = {
@@ -45,6 +45,8 @@ def response_pipeline(s: Spider, response: Spider.Response):
 spider.headers_generator = header_generator
 # 让它去打开浏览器验证
 spider.response_pipeline = response_pipeline
+
+
 # 取消每次请求间隔时间
 # spider.set_sleeper(lambda: None)
 
@@ -104,7 +106,8 @@ def parse_info(url: str):
 
     # resp = spider.get(url, cache=Spider.DISABLE_CACHE)  关闭缓存
     resp = spider.get(url)
-    shop_name = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/h1/text()|/html/body/div[2]/div/div[2]/div[1]/h1/e/text()')
+    shop_name = resp.xpath(
+        '/html/body/div[2]/div/div[2]/div[1]/h1/text()|/html/body/div[2]/div/div[2]/div[1]/h1/e/text()')
 
     brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
     star_num = brief_info.xpath('./span[1]/@class')
