@@ -98,13 +98,24 @@ def parse_info(url: str):
     # 包装post表
     # 请求url
     resp = spider.get(url, cache=Spider.DISABLE_CACHE)
-    basic_info = resp.css("#basic-info")[0]
-    shop_name = basic_info.xpath("./h1/text()")[0]
-    star_num = basic_info.xpath('./div[@class="mid-score"]/text()')[0]
-    # item_info 里面有一堆小把戏
-    items_info = basic_info.xpath('./span[@class="item"]/text()')
-    position = basic_info.xpath('./div[@class="address"]/span[@id="address"]/text()')[0]
-    tel = basic_info.xpath('./p[@class="tel"]/text()')[0]
+    shop_name = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/h1/text()|/html/body/div[2]/div/div[2]/div[1]/h1/e/text()')
+
+    biref_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
+    starnum = biref_info.xpath('./span[1]/@class')
+    reviewCount = biref_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()')
+    avgprice = biref_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()')
+
+    comment_score = biref_info.xpath('./span[@id="comment_score"]')[0]
+    taste = comment_score.xpath('./span[1]/text()|./span[1]/d/text()')
+    environment = comment_score.xpath('./span[2]/text()|./span[2]/d/text()')
+    service = comment_score.xpath('./span[3]/text()|./span[3]/d/text()')
+
+    expand_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[2]')[0]
+    position = expand_info.xpath('./div/span/text()|./div/span/e/text()').insert(0, "地址: ")
+
+    tel = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/p')[0].xpath('./text()|./*/text()')
+
+    print(shop_name, starnum, reviewCount, avgprice, taste, environment, service, position, tel)
 
     # 包装 Shop
     shop = Shop()
