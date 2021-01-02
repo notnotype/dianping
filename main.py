@@ -51,7 +51,7 @@ spider.set_sleeper(lambda: None)
 
 class Shop(Model):
     url = CharField()
-    name = CharField()
+    name = CharField(unique=True)
     items_info = []
     comment_count = IntegerField()
     common_price = FloatField()
@@ -68,7 +68,7 @@ class Shop(Model):
 
 
 class Comment(Model):
-    username = CharField()
+    username = CharField(unique=True)
     # 星星
     star = IntegerField()
     # 正文
@@ -173,8 +173,8 @@ def main():
     if not db.table_exists(Comment):
         db.create_tables([Comment])
 
-    keyword = input('input keyword: ')
-    position = input('input position: ')
+    keyword = input('input keyword(输入新疆来测试): ')
+    position = input('input position(随便输入): ')
 
     for search_url in shop_page_generator(keyword, position):
         '''search_url == *
