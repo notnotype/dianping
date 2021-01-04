@@ -37,7 +37,7 @@ def header_generator():
 def response_pipeline(s: Spider, response: Spider.Response):
     while response.title == '验证中心':
         input('去验证: {}'.format(response.url))
-        response = spider.get(response.history[0], cache=Spider.DISABLE_CACHE)
+        response = spider.get(response.history[0].url, cache=Spider.DISABLE_CACHE)
     return response
 
 
@@ -105,7 +105,7 @@ def parse_info(url: str):
     # 请求url
 
     # resp = spider.get(url, cache=Spider.DISABLE_CACHE)  关闭缓存
-    resp = spider.get(url)
+    resp = spider.get(url, cache=Spider.FORCE_CACHE)
     shop_name = resp.xpath(
         '/html/body/div[2]/div/div[2]/div[1]/h1/text()|/html/body/div[2]/div/div[2]/div[1]/h1/e/text()')
 
@@ -197,8 +197,10 @@ def main():
     if not db.table_exists(Comment):
         db.create_tables([Comment])
 
-    keyword = input('input keyword(输入新疆来测试): ')
-    position = input('input position(随便输入): ')
+    # keyword = input('input keyword(输入新疆来测试): ')
+    # position = input('input position(随便输入): ')
+    keyword = '新疆'
+    position = ''
 
     for search_url in shop_page_generator(keyword, position):
         '''search_url == *
