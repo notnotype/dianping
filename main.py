@@ -1,7 +1,8 @@
 """
 general_template
 """
-
+import re
+import json
 import logging
 from itertools import count
 from typing import List
@@ -18,6 +19,8 @@ spider = Spider()
 logger = logging.getLogger('spider')
 res = ResourceRoot('resources')
 db = SqliteDatabase('db.sqlite')
+with open("./fontMap.json", 'r') as f:
+    cmap = json.loads(f.read())
 
 
 def header_generator():
@@ -106,23 +109,32 @@ def parse_info(url: str):
 
     # resp = spider.get(url, cache=Spider.DISABLE_CACHE)  关闭缓存
     resp = spider.get(url, cache=Spider.FORCE_CACHE)
-    shop_name = resp.xpath(
-        '/html/body/div[2]/div/div[2]/div[1]/h1/text()|/html/body/div[2]/div/div[2]/div[1]/h1/e/text()')
+    #因为太长了 所以我把这一坨拿出来了 '/html/body/div[2]/div/div[2]/div[1]/h1'
+    title = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/h1')[0]
+    # 商店名
+    shop_name = join(uni2str(title.xpath('./text()|/./e/text()')))
 
     brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
+    # 星星数 还没解析这个
     star_num = brief_info.xpath('./span[1]/@class')
-    comment_count = brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()')
-    avg_price = brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()')
+    # 评论数
+    comment_count = join(uni2str(brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()')))
+    # 平均价格
+    avg_price = join(uni2str(brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()')))
 
     comment_score = brief_info.xpath('./span[@id="comment_score"]')[0]
-    taste = comment_score.xpath('./span[1]/text()|./span[1]/d/text()')
-    environment = comment_score.xpath('./span[2]/text()|./span[2]/d/text()')
-    service = comment_score.xpath('./span[3]/text()|./span[3]/d/text()')
+    # 口味
+    taste = join(uni2str(comment_score.xpath('./span[1]/text()|./span[1]/d/text()')))
+    # 环境
+    environment = join(uni2str(comment_score.xpath('./span[2]/text()|./span[2]/d/text()')))
+    # 服务
+    service = join(uni2str(comment_score.xpath('./span[3]/text()|./span[3]/d/text()')))
 
     expand_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[2]')[0]
-    position = expand_info.xpath('./div/span/text()|./div/span/e/text()').insert(0, "地址: ")
-
-    tel = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/p')[0].xpath('./text()|./*/text()')
+    # 地址
+    position = join(uni2str(expand_info.xpath('./div/span/text()|./div/span/e/text()')))
+    # 电话
+    tel = join(uni2str(resp.xpath('/html/body/div[2]/div/div[2]/div[1]/p')[0].xpath('./text()|./*/text()')))
 
     print(shop_name, star_num, comment_count, avg_price, taste, environment, service, position, tel)
 
@@ -197,10 +209,8 @@ def main():
     if not db.table_exists(Comment):
         db.create_tables([Comment])
 
-    # keyword = input('input keyword(输入新疆来测试): ')
-    # position = input('input position(随便输入): ')
-    keyword = '新疆'
-    position = ''
+    keyword = input('input keyword(输入新疆来测试): ')
+    position = input('input position(随便输入): ')
 
     for search_url in shop_page_generator(keyword, position):
         '''search_url == *
@@ -220,6 +230,26 @@ def test_request():
     r = spider.get('http://www.dianping.com/shop/l9ZszA41xUchPAwb', cache=Spider.DISABLE_CACHE)
     logger.info(r.__repr__())
     print(r.text)
+
+
+# 这里的chars: ['\uxxxx', '\uxxxx', '.', '1']是之类的
+# 这个函数把'\uxxxx' -> '\\uxxxx'(也就是 cmap 的 key ) -> value
+# 所以最后chars就变成了[value1, value2, '.', '1']
+def uni2str(chars):
+    for i in range(len(chars)):
+        try:
+            chars[i] = cmap[re.findall("[\ue000-\uffff]", chars[i])[0].encode("unicode_escape").decode("utf-8")]
+        except Exception as e:
+            pass
+    return chars
+
+
+# ['a', 'b', 'c'] -> 'abc'
+def join(chars):
+    out = ''
+    for each in chars:
+        out += each
+    return out.strip(' ')
 
 
 if __name__ == '__main__':
