@@ -56,17 +56,19 @@ spider.response_pipeline = response_pipeline
 
 class Shop(Model):
     url = CharField()
-    name = CharField(unique=True)
-    items_info = []
-    comment_count = IntegerField()
-    avg_price = FloatField()
-    taste = FloatField()
-    environment = FloatField()
-    service = FloatField()
+    name = CharField()
+    comment_count = IntegerField(null=True)
+    avg_price = FloatField(null=True)
+    # 口味
+    taste = FloatField(null=True)
+    # 环境
+    environment = FloatField(null=True)
+    # 服务
+    service = FloatField(null=True)
     # 位置
-    position = CharField()
-    tel = CharField()
-    data = TextField()
+    position = CharField(null=True)
+    tel = CharField(null=True)
+    data = TextField(null=True)
 
     class Meta:
         database = db
@@ -109,7 +111,7 @@ def parse_info(url: str):
 
     # resp = spider.get(url, cache=Spider.DISABLE_CACHE)  关闭缓存
     resp = spider.get(url, cache=Spider.FORCE_CACHE)
-    #因为太长了 所以我把这一坨拿出来了 '/html/body/div[2]/div/div[2]/div[1]/h1'
+    # 因为太长了 所以我把这一坨拿出来了 '/html/body/div[2]/div/div[2]/div[1]/h1'
     title = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/h1')[0]
     # 商店名
     shop_name = join(uni2str(title.xpath('./text()|/./e/text()')))
@@ -118,9 +120,11 @@ def parse_info(url: str):
     # 星星数 还没解析这个
     star_num = brief_info.xpath('./span[1]/@class')
     # 评论数
-    comment_count = join(uni2str(brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()')))
+    comment_count = join(
+        uni2str(brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()')))
     # 平均价格
-    avg_price = join(uni2str(brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()')))
+    avg_price = join(
+        uni2str(brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()')))
 
     comment_score = brief_info.xpath('./span[@id="comment_score"]')[0]
     # 口味
@@ -138,28 +142,69 @@ def parse_info(url: str):
 
     print(shop_name, star_num, comment_count, avg_price, taste, environment, service, position, tel)
 
+    '''清理数据'''
+    # comment_count
+    try:
+        temp = int(comment_count.replace('条评价', '').strip())
+        comment_count = temp
+    except ValueError:
+        comment_count = None
+
+    # service
+    try:
+        temp = float(service.replace('服务:', '').strip())
+        service = temp
+    except ValueError:
+        service = None
+
+    # taste
+    try:
+        temp = float(taste.replace('口味:', '').strip())
+        taste = temp
+    except ValueError:
+        taste = None
+
+    # avg_price
+    try:
+        temp = float(avg_price.replace('人均:', '').strip())
+        avg_price = temp
+    except ValueError:
+        avg_price = None
+
+    try:
+        temp = float(environment.replace('环境:', '').strip())
+        environment = temp
+    except ValueError:
+        environment = None
+
+    # todo 星星数目
+    # try:
+    #     temp = float(taste.replace('口味:', '').strip())
+    #     taste = temp
+    # except ValueError:
+    #     taste = None
+
     '''暂时不包装到数据库'''
-    # # 包装 Shop
-    # shop = Shop()
-    # shop.url = url
-    # shop.name = shop_name
-    # shop.items_info = brief_info
-    # shop.position = position
-    # shop.tel = tel
-    # shop.comment_count = comment_count
-    # shop.avg_price = avg_price
-    # shop.taste = taste
-    # shop.environment = environment
-    # shop.service = service
-    # shop.position = position
-    # shop.data = 'data'
-    # # 包装评论
+    # 包装 Shop
+    # query = Shop.select().where(Shop)
+    shop = Shop()
+    shop.url = url
+    shop.name = shop_name
+    shop.comment_count = comment_count
+    shop.avg_price = avg_price
+    shop.taste = taste
+    shop.environment = environment
+    shop.service = service
+    shop.position = position
+    shop.tel = tel
+    shop.data = 'data'
+    # 包装评论
     # comments = parse_comment(resp)
     # for comment in comments:
     #     comment.save()
-    #
-    # # 在包装后
-    # shop.save()
+
+    # 在包装后
+    shop.save()
 
 
 def test_parse_info():
@@ -209,8 +254,10 @@ def main():
     if not db.table_exists(Comment):
         db.create_tables([Comment])
 
-    keyword = input('input keyword(输入新疆来测试): ')
-    position = input('input position(随便输入): ')
+    # keyword = input('input keyword(输入新疆来测试): ')
+    # position = input('input position(随便输入): ')
+    keyword = '新疆'
+    position = 0
 
     for search_url in shop_page_generator(keyword, position):
         '''search_url == *
@@ -239,7 +286,9 @@ def uni2str(chars):
     for i in range(len(chars)):
         try:
             chars[i] = cmap[re.findall("[\ue000-\uffff]", chars[i])[0].encode("unicode_escape").decode("utf-8")]
-        except Exception as e:
+        except KeyError as e:
+            pass
+        except IndexError:
             pass
     return chars
 
