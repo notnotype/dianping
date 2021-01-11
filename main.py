@@ -23,21 +23,26 @@ with open("./fontMap.json", 'r') as f:
     cmap = json.loads(f.read())
 
 
-def header_generator():
-    header = {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'zh-CN,zh;q=0.9,zh-TW;q=0.8,en-US;q=0.7,en;q=0.6',
-        'Cache-Control': 'max-age=0',
-        'Host': 'www.dianping.com',
-        'Referer': 'http://www.dianping.com/beijing/',
-        'Upgrade-Insecure-Requests': '1',
-        'User-Agent': str(UserAgent().random),
-    }
-    return header
+def get_header_generator(referer='http://www.dianping.com/beijing/'):
+    # 动态改变 referer
+    def warp():
+        header = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
+            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Language': 'zh-CN,zh;q=0.9,zh-TW;q=0.8,en-US;q=0.7,en;q=0.6',
+            'Cache-Control': 'max-age=0',
+            'Host': 'www.dianping.com',
+            'Referer': referer,
+            'Upgrade-Insecure-Requests': '1',
+            'User-Agent': str(UserAgent().random),
+        }
+        return header
+    return warp
 
 
 def response_pipeline(s: Spider, response: Spider.Response):
+    # 动态修改referer
+    s.set_header_generator(get_header_generator(referer=response.url))
     while response.title == '验证中心':
         input('去验证: {}'.format(response.url))
         response = spider.get(response.history[0].url, cache=Spider.DISABLE_CACHE)
@@ -45,7 +50,7 @@ def response_pipeline(s: Spider, response: Spider.Response):
 
 
 # 设置爬虫
-spider.headers_generator = header_generator
+spider.headers_generator = get_header_generator()
 # 让它去打开浏览器验证
 spider.response_pipeline = response_pipeline
 
@@ -186,8 +191,11 @@ def parse_info(url: str):
 
     '''暂时不包装到数据库'''
     # 包装 Shop
-    # query = Shop.select().where(Shop)
-    shop = Shop()
+    query = Shop.select().where(Shop.name == shop_name)
+    if not query:
+        shop = Shop()
+    else:
+        shop = Shop()
     shop.url = url
     shop.name = shop_name
     shop.comment_count = comment_count
@@ -257,7 +265,7 @@ def main():
     # keyword = input('input keyword(输入新疆来测试): ')
     # position = input('input position(随便输入): ')
     keyword = '新疆'
-    position = 0
+    position = '1'
 
     for search_url in shop_page_generator(keyword, position):
         '''search_url == *
