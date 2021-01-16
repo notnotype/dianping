@@ -1,6 +1,8 @@
 """
 general_template
 """
+import requests
+import re
 import logging
 from itertools import count
 from typing import List
@@ -55,6 +57,36 @@ spider.response_pipeline = response_pipeline
 # 取消每次请求间隔时间
 spider.set_sleeper(utils.random_sleeper(0, 8))
 
+
+# get font mapping
+from font_mapping import FontMapping
+
+fm_num = FontMapping()
+fm_address = FontMapping()
+old_css_urls = set()
+
+
+def get_fontfile_url(css_url: str, classname: str) -> str:
+    css_resp = requests.get(css_url)
+    fontfile_url = 'http:' + re.findall('.+url\("(.+.woff)"\);} \.%s' % classname, css_resp.text)[0]
+    print(fontfile_url)
+    return fontfile_url
+
+
+def download_fontfile(font_url: str) -> str:
+    font_file = requests.get(font_url)
+    font_filename = "fonts/%s" % font_url[-13:]
+    with open(font_filename, 'wb') as f:
+        f.write(font_file.content)
+    return font_filename
+
+
+def update_mapping(css_url):
+    if css_url not in old_css_urls:
+        fm_num.update(download_fontfile(get_fontfile_url(css_url, 'num')))
+        fm_address.update(download_fontfile(get_fontfile_url(css_url, 'address')))
+        old_css_urls.add(css_url)
+    return
 
 
 class Shop(Model):
@@ -117,15 +149,8 @@ def parse_info(url: str):
     resp = spider.get(url)
     #css文件的url
     css_url = 'http:' + resp.xpath("/html/head/link[10]/@href")[0]
+    update_mapping(css_url)
 
-    # get font mapping
-    from font_mapping import FontMapping
-
-    fm = FontMapping()
-    fm.update(fm.download_fontfile(fm.get_font_url(css_url)))
-
-    # 因为太长了 所以我把这一坨拿出来了 '/html/body/div[2]/div/div[2]/div[1]/h1'
-    title = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/h1')[0]
     # 商店名
     shop_name = resp.title[resp.title.find('【') + 1:resp.title.find('】')]
 
@@ -134,26 +159,26 @@ def parse_info(url: str):
     star_num = int(brief_info.xpath('./span[1]/@class')[0][-2:])/10
     # 评论数
     comment_count = ''.join(
-        fm.mapping(each) for each in
+        fm_num.mapping(each) for each in
         brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()'))
     # 平均价格
     avg_price = ''.join(
-        fm.mapping(each) for each in
+        fm_num.mapping(each) for each in
         brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()'))
 
     comment_score = brief_info.xpath('./span[@id="comment_score"]')[0]
     # 口味
-    taste = ''.join(fm.mapping(each) for each in comment_score.xpath('./span[1]/text()|./span[1]/d/text()'))
+    taste = ''.join(fm_num.mapping(each) for each in comment_score.xpath('./span[1]/text()|./span[1]/d/text()'))
     # 环境
-    environment = ''.join(fm.mapping(each) for each in comment_score.xpath('./span[2]/text()|./span[2]/d/text()'))
+    environment = ''.join(fm_num.mapping(each) for each in comment_score.xpath('./span[2]/text()|./span[2]/d/text()'))
     # 服务
-    service = ''.join(fm.mapping(each) for each in comment_score.xpath('./span[3]/text()|./span[3]/d/text()'))
+    service = ''.join(fm_num.mapping(each) for each in comment_score.xpath('./span[3]/text()|./span[3]/d/text()'))
 
     expand_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[2]')[0]
     # 地址
-    position = ''.join(fm.mapping(each) for each in expand_info.xpath('./div/span/text()|./div/span/e/text()'))
+    position = ''.join(fm_address.mapping(each) for each in expand_info.xpath('./div/span/text()|./div/span/e/text()'))
     # 电话
-    tel = ''.join([fm.mapping(each) for each in
+    tel = ''.join([fm_address.mapping(each) for each in
                    resp.xpath('/html/body/div[2]/div/div[2]/div[1]/p')[0].xpath('./text()|./*/text()')])
 
     print(shop_name, star_num, comment_count, avg_price, taste, environment, service, position, tel)
