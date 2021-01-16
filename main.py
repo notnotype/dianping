@@ -128,8 +128,8 @@ def parse_info(url: str):
     shop_name = resp.title[resp.title.find('【')+1:resp.title.find('】')]
 
     brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
-    # 星星数 还没解析这个
-    star_num = brief_info.xpath('./span[1]/@class')
+    # 星星数
+    star_num = re.findall("\d+",brief_info.xpath('./span[1]/@class')[0])[0] / 10
     # 评论数
     comment_count = ''.join(
         fm.mapping(each) for each in
