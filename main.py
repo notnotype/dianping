@@ -14,7 +14,6 @@ from lazy_spider import utils
 from lazy_spider import ResourceRoot
 from lazy_spider import Spider
 
-
 spider = Spider()
 logger = logging.getLogger('spider')
 res = ResourceRoot('resources')
@@ -125,11 +124,11 @@ def parse_info(url: str):
     # 因为太长了 所以我把这一坨拿出来了 '/html/body/div[2]/div/div[2]/div[1]/h1'
     title = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/h1')[0]
     # 商店名
-    shop_name = resp.title[resp.title.find('【')+1:resp.title.find('】')]
+    shop_name = resp.title[resp.title.find('【') + 1:resp.title.find('】')]
 
     brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
-    # 星星数
-    star_num = re.findall("\d+",brief_info.xpath('./span[1]/@class')[0])[0] / 10
+    # 星星数 还没解析这个
+    star_num = brief_info.xpath('./span[1]/@class')
     # 评论数
     comment_count = ''.join(
         fm.mapping(each) for each in
