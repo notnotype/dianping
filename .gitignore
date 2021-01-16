@@ -127,3 +127,6 @@ dmypy.json
 .pyre/
 config.ini
 .log/
+temp.jpeg
+fonts/*.woff
+fonts/*.xml
