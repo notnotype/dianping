@@ -30,7 +30,7 @@ class FontMapping:
     def get_font_url(self, css_url: str) -> str:
         css_resp = requests.get(css_url)
         try:
-            font_url = re.findall("//s3plus\.meituan\.net/v1/mss_73a511b8f91f43d0bdae92584ea6330b/font/\w+\.woff", css_resp.text)[-1]
+            font_url = 'http:' + re.findall("//s3plus\.meituan\.net/v1/mss_73a511b8f91f43d0bdae92584ea6330b/font/\w+\.woff", css_resp.text)[-1]
             return font_url
         except:
             raise Exception(css_resp.status_code)

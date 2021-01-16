@@ -116,7 +116,7 @@ def parse_info(url: str):
     # resp = spider.get(url, cache=Spider.DISABLE_CACHE)  # 关闭缓存
     resp = spider.get(url)
     #css文件的url
-    css_url = resp.xpath("/html/head/link[10]/@href")[0]
+    css_url = 'http:' + resp.xpath("/html/head/link[10]/@href")[0]
 
     # get font mapping
     from font_mapping import FontMapping
