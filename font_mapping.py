@@ -4,6 +4,8 @@ from logging import getLogger
 from PIL import Image, ImageFont, ImageDraw
 from fontTools.ttLib.ttFont import TTFont
 from aip import AipOcr
+import requests
+import re
 
 logger = getLogger('spider')
 
@@ -24,6 +26,24 @@ class FontMapping:
         self.config = config
 
         self.real_font_mapping = {}
+
+    def get_font_url(self, css_url: str) -> str:
+        css_resp = requests.get(css_url)
+        try:
+            font_url = re.findall("//s3plus\.meituan\.net/v1/mss_73a511b8f91f43d0bdae92584ea6330b/font/\w+\.woff", css_resp.text)[-1]
+            return font_url
+        except:
+            raise Exception(css_resp.status_code)
+
+    def download_fontfile(self, font_url: str) -> str:
+        font_file = requests.get(font_url)
+        font_filename = "fonts/%s" % font_url[-13:]
+        try:
+            with open(font_filename, 'ab+') as f:
+                f.write(font_file.content)
+            return font_filename
+        except Exception as e:
+            return None
 
 
     def _orc(self, path: str) -> str:

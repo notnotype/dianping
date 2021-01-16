@@ -55,12 +55,6 @@ spider.response_pipeline = response_pipeline
 # 取消每次请求间隔时间
 spider.set_sleeper(utils.random_sleeper(0, 8))
 
-# get font mapping
-from font_mapping import FontMapping
-
-fm = FontMapping()
-fm.update('fonts/28d3b912.woff')
-fm.update('fonts/c8b40fae.woff')
 
 
 class Shop(Model):
@@ -121,14 +115,23 @@ def parse_info(url: str):
 
     # resp = spider.get(url, cache=Spider.DISABLE_CACHE)  # 关闭缓存
     resp = spider.get(url)
+    #css文件的url
+    css_url = resp.xpath("/html/head/link[10]/@href")[0]
+
+    # get font mapping
+    from font_mapping import FontMapping
+
+    fm = FontMapping()
+    fm.update(fm.download_fontfile(fm.get_font_url(css_url)))
+
     # 因为太长了 所以我把这一坨拿出来了 '/html/body/div[2]/div/div[2]/div[1]/h1'
     title = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/h1')[0]
     # 商店名
     shop_name = resp.title[resp.title.find('【') + 1:resp.title.find('】')]
 
     brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
-    # 星星数 还没解析这个
-    star_num = brief_info.xpath('./span[1]/@class')
+    # 星星数
+    star_num = int(brief_info.xpath('./span[1]/@class')[0][-2:])/10
     # 评论数
     comment_count = ''.join(
         fm.mapping(each) for each in
