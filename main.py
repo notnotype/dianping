@@ -115,8 +115,8 @@ def parse_info(url: str):
     shop_name = join(uni2str(title.xpath('./text()|/./e/text()')))
 
     brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
-    # 星星数 还没解析这个
-    star_num = brief_info.xpath('./span[1]/@class')
+    # 星星数
+    star_num = re.findall("\d+",brief_info.xpath('./span[1]/@class')[0])[0] / 10
     # 评论数
     comment_count = join(uni2str(brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()')))
     # 平均价格
