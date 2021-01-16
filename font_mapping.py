@@ -9,7 +9,7 @@ logger = getLogger('spider')
 
 
 class FontMapping:
-    def __init__(self, font_file: str = None):
+    def __init__(self):
         config = configparser.ConfigParser()
         config.read('config.ini')
 
@@ -23,8 +23,8 @@ class FontMapping:
 
         self.config = config
 
-        if font_file:
-            self.get_mapping(font_file)
+        self.real_font_mapping = {}
+
 
     def _orc(self, path: str) -> str:
         f = open(path, 'rb')
@@ -33,7 +33,8 @@ class FontMapping:
         f.close()
         return result
 
-    def get_mapping(self, font_file: str) -> dict:
+
+    def update(self, font_file: str) -> None:
         # open font file
         font = TTFont(font_file)
         font2 = ImageFont.truetype(font_file, 20)
@@ -42,17 +43,16 @@ class FontMapping:
         cmap: dict = font.getBestCmap()
         del cmap[120]
 
-        real_font_mapping = {}
-        x_counts = 20
-        y_counts = 20
+        x_counts = 25
+        y_counts = 25
 
         # get font info
         font_name = chr(list(cmap.keys())[0])
         font_size = list(font2.getsize(font_name))
         font_offset = list(font2.getoffset(font_name))
 
-        font_size[0] += font_offset[0]
-        font_size[1] += font_offset[1]
+        font_size[0] += font_offset[0] // 2
+        font_size[1] += font_offset[1] // 2
 
         # print('font_name:', font_name)
         # print('font_size:', font_size)
@@ -83,8 +83,8 @@ class FontMapping:
 
         real_font_mapping = dict(zip(text.replace('\n', ''), result.replace('\n', '')))
 
-        self.real_font_mapping = real_font_mapping
-        return real_font_mapping
+        self.real_font_mapping.update(real_font_mapping)
+        print(real_font_mapping)
 
     def mapping(self, char: str) -> str:
         if not self.real_font_mapping:
@@ -94,13 +94,13 @@ class FontMapping:
             return char.translate(trans)
 
 
-def main():
-    fm = FontMapping()
-    mp = fm.get_mapping('fonts/2020-1-13.woff')
-    text = '\ue03f'
-    result = fm.mapping(text)
-    print(result)
-
-
-if __name__ == '__main__':
-    exit(main())
+# def main():
+#     fm = FontMapping()
+#     fm.update('fonts/c8b40fae.woff')
+#     text = '\ue03f'
+#     result = fm.mapping(text)
+#     print(result)
+#
+#
+# if __name__ == '__main__':
+#     exit(main())

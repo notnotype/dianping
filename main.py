@@ -1,8 +1,6 @@
 """
 general_template
 """
-import re
-import json
 import logging
 from itertools import count
 from typing import List
@@ -12,8 +10,10 @@ from peewee import *
 from fake_useragent import UserAgent
 from lxml.html import HtmlElement
 
-from spider import ResourceRoot
-from spider import Spider
+from lazy_spider import utils
+from lazy_spider import ResourceRoot
+from lazy_spider import Spider
+
 
 spider = Spider()
 logger = logging.getLogger('spider')
@@ -54,12 +54,14 @@ spider.headers_generator = get_header_generator()
 spider.response_pipeline = response_pipeline
 
 # 取消每次请求间隔时间
-# spider.set_sleeper(lambda: None)
+spider.set_sleeper(utils.random_sleeper(0, 8))
 
 # get font mapping
 from font_mapping import FontMapping
 
-fm = FontMapping('fonts/2020-1-13.woff')
+fm = FontMapping()
+fm.update('fonts/28d3b912.woff')
+fm.update('fonts/c8b40fae.woff')
 
 
 class Shop(Model):
@@ -118,22 +120,24 @@ def parse_info(url: str):
     # 包装post表
     # 请求url
 
-    resp = spider.get(url, cache=Spider.DISABLE_CACHE)  #关闭缓存
-    # resp = spider.get(url, cache=Spider.FORCE_CACHE)
+    # resp = spider.get(url, cache=Spider.DISABLE_CACHE)  # 关闭缓存
+    resp = spider.get(url)
     # 因为太长了 所以我把这一坨拿出来了 '/html/body/div[2]/div/div[2]/div[1]/h1'
     title = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/h1')[0]
     # 商店名
-    shop_name = ''.join([fm.mapping(each) for each in title.xpath('./text()|/./e/text()')])
+    shop_name = resp.title[resp.title.find('【')+1:resp.title.find('】')]
 
     brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
     # 星星数 还没解析这个
     star_num = brief_info.xpath('./span[1]/@class')
     # 评论数
     comment_count = ''.join(
-        fm.mapping(each) for each in brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()'))
+        fm.mapping(each) for each in
+        brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()'))
     # 平均价格
     avg_price = ''.join(
-        fm.mapping(each) for each in brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()'))
+        fm.mapping(each) for each in
+        brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()'))
 
     comment_score = brief_info.xpath('./span[@id="comment_score"]')[0]
     # 口味
