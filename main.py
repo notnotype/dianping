@@ -18,7 +18,6 @@ from lazy_spider import utils
 from lazy_spider import ResourceRoot
 from lazy_spider import Spider
 
-
 spider = Spider()
 logger = logging.getLogger('spider')
 res = ResourceRoot('resources')
@@ -47,7 +46,7 @@ def response_pipeline(s: Spider, response: Spider.Response):
     # 动态修改referer
     s.set_header_generator(get_header_generator(referer=response.url))
     while response.title == '验证中心':
-        input('去验证: {}'.format(response.url))
+        input('去验证然后回车: {}'.format(response.url))
         response = spider.get(response.history[0].url, cache=Spider.DISABLE_CACHE)
     return response
 
@@ -62,6 +61,7 @@ spider.set_sleeper(utils.random_sleeper(0, 8))
 
 # get font mapping
 from lazy_spider.parse.fonttools import BaiduORCFontMapping
+
 config = configparser.ConfigParser()
 config.read('./config.ini')
 
@@ -76,14 +76,14 @@ old_css_urls = set()
 
 
 def get_font_file_url(css_url: str, classname: str) -> str:
-    css_resp = requests.get(css_url)
+    css_resp = spider.get(css_url)
     font_file_url = 'http:' + re.findall('.+url\("(.+.woff)"\);} \.%s' % classname, css_resp.text)[0]
-    print(font_file_url)
+    logger.info(font_file_url, classname)
     return font_file_url
 
 
 def download_font_file(font_url: str) -> str:
-    font_file = requests.get(font_url)
+    font_file = spider.get(font_url)
     font_filename = "fonts/%s" % font_url[-13:]
     with open(font_filename, 'wb') as f:
         f.write(font_file.content)
@@ -92,8 +92,9 @@ def download_font_file(font_url: str) -> str:
 
 def update_mapping(css_url):
     if css_url not in old_css_urls:
-        fm_num.update(download_font_file(get_font_file_url(css_url, 'num')))
-        fm_address.update(download_font_file(get_font_file_url(css_url, 'address')))
+        fm_num.update(download_font_file(get_font_file_url(css_url, 'num')), show_img=True, strict=True)
+        fm_address.update(download_font_file(get_font_file_url(css_url, 'address')), fontsize=45, show_img=True,
+                          strict=True)
         old_css_urls.add(css_url)
     return
 
@@ -167,65 +168,66 @@ def parse_info(url: str):
     # 星星数
     star_num = int(brief_info.xpath('./span[1]/@class')[0][-2:]) / 10
     # 评论数
-    comment_count = ''.join(
-        fm_num.mapping(each) for each in
-        brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()'))
+    comment_count = ''.join(brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()'))
     # 平均价格
-    avg_price = ''.join(
-        fm_num.mapping(each) for each in
-        brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()'))
+    avg_price = ''.join(brief_info.xpath('./span[@id="avgPriceTitle"]/text()|./span[@id="avgPriceTitle"]/d/text()'))
 
     comment_score = brief_info.xpath('./span[@id="comment_score"]')[0]
     # 口味
-    taste = ''.join(fm_num.mapping(each) for each in comment_score.xpath('./span[1]/text()|./span[1]/d/text()'))
+    taste = ''.join(comment_score.xpath('./span[1]/text()|./span[1]/d/text()'))
     # 环境
-    environment = ''.join(fm_num.mapping(each) for each in comment_score.xpath('./span[2]/text()|./span[2]/d/text()'))
+    environment = ''.join(comment_score.xpath('./span[2]/text()|./span[2]/d/text()'))
     # 服务
-    service = ''.join(fm_num.mapping(each) for each in comment_score.xpath('./span[3]/text()|./span[3]/d/text()'))
+    service = ''.join(comment_score.xpath('./span[3]/text()|./span[3]/d/text()'))
 
     expand_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[2]')[0]
     # 地址
-    position = ''.join(fm_address.mapping(each) for each in expand_info.xpath('./div/span/text()|./div/span/e/text()'))
+    position = ''.join(expand_info.xpath('./div/span/text()|./div/span/e/text()'))
     # 电话
-    tel = ''.join([fm_address.mapping(each) for each in
-                   resp.xpath('/html/body/div[2]/div/div[2]/div[1]/p')[0].xpath('./text()|./*/text()')])
-
-    print(shop_name, star_num, comment_count, avg_price, taste, environment, service, position, tel)
+    tel = ''.join(resp.xpath('/html/body/div[2]/div/div[2]/div[1]/p')[0].xpath('./text()|./*/text()'))
 
     '''清理数据'''
     # comment_count
     try:
-        temp = int(comment_count.replace('条评价', '').strip())
-        comment_count = temp
+        temp = comment_count.replace('条评价', '').strip()
+        temp = fm_num.mapping(temp)
+        comment_count = int(temp)
     except ValueError:
         comment_count = None
 
     # service
     try:
-        temp = float(service.replace('服务:', '').strip())
-        service = temp
+        temp = service.replace('服务:', '').strip()
+        temp = fm_num.mapping(temp)
+        service = float(temp)
     except ValueError:
         service = None
 
     # taste
     try:
-        temp = float(taste.replace('口味:', '').strip())
-        taste = temp
+        temp = taste.replace('口味:', '').strip()
+        temp = fm_num.mapping(temp)
+        taste = float(temp)
     except ValueError:
         taste = None
 
     # avg_price
     try:
-        temp = float(avg_price.replace('人均:', '').strip())
-        avg_price = temp
+        temp = avg_price.replace('人均:', '').strip()
+        temp = fm_num.mapping(temp)
+        avg_price = float(temp)
     except ValueError:
         avg_price = None
 
     try:
-        temp = float(environment.replace('环境:', '').strip())
-        environment = temp
+        temp = environment.replace('环境:', '').strip()
+        temp = fm_num.mapping(temp)
+        environment = float(temp)
     except ValueError:
         environment = None
+
+    position = fm_address.mapping(position).strip()
+    tel = fm_num.mapping(tel).replace('电话： ', '').strip()
 
     # todo 星星数目
     # try:
@@ -233,6 +235,8 @@ def parse_info(url: str):
     #     taste = temp
     # except ValueError:
     #     taste = None
+
+    print(shop_name, star_num, comment_count, avg_price, taste, environment, service, position, tel)
 
     '''暂时不包装到数据库'''
     # 包装 Shop
@@ -309,7 +313,7 @@ def main():
 
     # keyword = input('input keyword(输入新疆来测试): ')
     # position = input('input position(随便输入): ')
-    keyword = '新疆'
+    keyword = '黑潮'
     position = '1'
 
     for search_url in shop_page_generator(keyword, position):
