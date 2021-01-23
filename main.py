@@ -189,7 +189,6 @@ def parse_info(url: str):
     time_item = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[4]/p[1]/span[2]')[0]
     open_time = ''.join(time_item.xpath('./text()|./*/text()'))
 
-
     '''清理数据'''
     # comment_count
     try:
@@ -245,7 +244,8 @@ def parse_info(url: str):
     # except Exception:
     #     open_time = None
 
-    print(shop_name, star_num, comment_count, avg_price, taste, environment, service, position, tel)
+    print(shop_name, star_num, comment_count, avg_price, taste, environment, service,
+          position, tel, open_time)
 
     '''暂时不包装到数据库'''
     # 包装 Shop
