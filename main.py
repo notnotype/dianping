@@ -57,7 +57,7 @@ spider.headers_generator = get_header_generator()
 spider.response_pipeline = response_pipeline
 
 # 取消每次请求间隔时间
-spider.set_sleeper(utils.random_sleeper(0, 8))
+spider.set_sleeper(utils.random_sleeper(0, 10))
 
 # get font mapping
 from lazy_spider.parse.fonttools import BaiduORCFontMapping
@@ -166,7 +166,11 @@ def parse_info(url: str):
 
     brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
     # 星星数
-    star_num = int(brief_info.xpath('./span[1]/@class')[0][-2:]) / 10
+    try:
+        star_num = int(brief_info.xpath('./span[1]/@class')[0][-2:]) / 10
+    except ValueError as e:
+        star_num = None
+        logger.error(e)
     # 评论数
     comment_count = ''.join(brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()'))
     # 平均价格
@@ -227,14 +231,7 @@ def parse_info(url: str):
         environment = None
 
     position = fm_address.mapping(position).strip()
-    tel = fm_num.mapping(tel).replace('电话： ', '').strip()
-
-    # todo 星星数目
-    # try:
-    #     temp = float(taste.replace('口味:', '').strip())
-    #     taste = temp
-    # except ValueError:
-    #     taste = None
+    tel = fm_num.mapping(tel).replace('电话：', '').replace('无', '').replace('添加', '').strip()
 
     print(shop_name, star_num, comment_count, avg_price, taste, environment, service, position, tel)
 
@@ -313,7 +310,7 @@ def main():
 
     # keyword = input('input keyword(输入新疆来测试): ')
     # position = input('input position(随便输入): ')
-    keyword = '黑潮'
+    keyword = '新疆'
     position = '1'
 
     for search_url in shop_page_generator(keyword, position):
