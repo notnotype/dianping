@@ -3,7 +3,6 @@ general_template
 """
 import configparser
 
-import requests
 import re
 import logging
 from itertools import count
@@ -161,16 +160,13 @@ def parse_info(url: str):
     css_url = 'http:' + resp.xpath("/html/head/link[10]/@href")[0]
     update_mapping(css_url)
 
+    # 以下是原始数据(还没有进行字体解析)
     # 商店名
     shop_name = resp.title[resp.title.find('【') + 1:resp.title.find('】')]
 
     brief_info = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[1]')[0]
     # 星星数
-    try:
-        star_num = int(brief_info.xpath('./span[1]/@class')[0][-2:]) / 10
-    except ValueError as e:
-        star_num = None
-        logger.error(e)
+    star_num = int(re.findall('\d+', brief_info.xpath('./span[1]/@class')[0])[0]) / 10
     # 评论数
     comment_count = ''.join(brief_info.xpath('./span[@id="reviewCount"]/text()|./span[@id="reviewCount"]/d/text()'))
     # 平均价格
@@ -189,6 +185,10 @@ def parse_info(url: str):
     position = ''.join(expand_info.xpath('./div/span/text()|./div/span/e/text()'))
     # 电话
     tel = ''.join(resp.xpath('/html/body/div[2]/div/div[2]/div[1]/p')[0].xpath('./text()|./*/text()'))
+    # 营业时间
+    time_item = resp.xpath('/html/body/div[2]/div/div[2]/div[1]/div[4]/p[1]/span[2]')[0]
+    open_time = ''.join(time_item.xpath('./text()|./*/text()'))
+
 
     '''清理数据'''
     # comment_count
@@ -217,7 +217,7 @@ def parse_info(url: str):
 
     # avg_price
     try:
-        temp = avg_price.replace('人均:', '').strip()
+        temp = avg_price.replace('人均:', '').replace('元', '').strip()
         temp = fm_num.mapping(temp)
         avg_price = float(temp)
     except ValueError:
@@ -232,6 +232,18 @@ def parse_info(url: str):
 
     position = fm_address.mapping(position).strip()
     tel = fm_num.mapping(tel).replace('电话：', '').replace('无', '').replace('添加', '').strip()
+
+    # todo 营业时间
+    # try:
+    #     if open_time:
+    #         # 这里有2套字体 所以我先这么表达, shopdesc 和 hours 是类名 这2个对象还没实例化
+    #         temp = fm_hours.mapping(fm_shopdesc.mapping(open_time))
+    #         open_time = temp
+    #     else:
+    #        # 营业时间可能为空字符串
+    #        open_time = None
+    # except Exception:
+    #     open_time = None
 
     print(shop_name, star_num, comment_count, avg_price, taste, environment, service, position, tel)
 
