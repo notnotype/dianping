@@ -243,12 +243,12 @@ def parse_info(url: str):
     # todo 营业时间
     # try:
     #     if open_time:
-    #        # 营业时间可能为空字符串
-    #        open_time = None
-    #     else:
     #         # 这里有2套字体 所以我先这么表达, shopdesc 和 hours 是类名 这2个对象还没实例化
     #         temp = fm_hours.mapping(fm_shopdesc.mapping(open_time))
     #         open_time = temp
+    #     else:
+    #        # 营业时间可能为空字符串
+    #        open_time = None
     # except Exception:
     #     open_time = None
 
