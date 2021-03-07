@@ -25,9 +25,9 @@ def main():
     canvas.show()
 
     # recognize
-    # APP_ID = '23531711'
-    # API_KEY = 'QBTpbZYLLAmz72SneRkzLQjP'
-    # SECRET_KEY = 'nEpMa9sonbmDV2KEOTo1SQzUBxLAbSBi'
+    # APP_ID = ' '
+    # API_KEY = ' '
+    # SECRET_KEY = ' '
     #
     # client = AipOcr(APP_ID, API_KEY, SECRET_KEY)
     # canvas.save('temp.jpeg', format='jpeg')

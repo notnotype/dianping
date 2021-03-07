@@ -9,6 +9,7 @@ from itertools import count
 from typing import List
 from urllib.parse import quote
 
+from lazy_spider.http import Response
 from peewee import *
 from fake_useragent import UserAgent
 from lxml.html import HtmlElement
@@ -16,6 +17,7 @@ from lxml.html import HtmlElement
 from lazy_spider import utils
 from lazy_spider import ResourceRoot
 from lazy_spider import Spider
+from lazy_spider.spider import RandomTimeSleeper
 
 spider = Spider()
 logger = logging.getLogger('spider')
@@ -41,9 +43,9 @@ def get_header_generator(referer='http://www.dianping.com/beijing/'):
     return warp
 
 
-def response_pipeline(s: Spider, response: Spider.Response):
+def response_pipeline(s: Spider, response: Response):
     # 动态修改referer
-    s.set_header_generator(get_header_generator(referer=response.url))
+    s.headers_generator = get_header_generator(referer=response.url)
     while response.title == '验证中心':
         input('去验证然后回车: {}'.format(response.url))
         response = spider.get(response.history[0].url, cache=Spider.DISABLE_CACHE)
@@ -53,10 +55,10 @@ def response_pipeline(s: Spider, response: Spider.Response):
 # 设置爬虫
 spider.headers_generator = get_header_generator()
 # 让它去打开浏览器验证
-spider.response_pipeline = response_pipeline
+spider.add_response_middlewares([response_pipeline])
 
 # 取消每次请求间隔时间
-spider.set_sleeper(utils.random_sleeper(0, 10))
+spider.set_sleeper(RandomTimeSleeper(1, 3))
 
 # get font mapping
 from lazy_spider.parse.fonttools import BaiduORCFontMapping
@@ -134,7 +136,7 @@ class Comment(Model):
         database = db
 
 
-def parse_comment(resp: spider.Response) -> List[Comment]:
+def parse_comment(resp: Response) -> List[Comment]:
     """获取 'http://www.dianping.com/shop/l9ZszA41xUchPAwb' 的评论
 
     :param resp: http://www.dianping.com/shop/l9ZszA41xUchPAwb
